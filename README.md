@@ -1,1 +1,1 @@
-# GLink - A simple URL shortner built with GoLang
+# GLink - A simple URL shortener built with GoLang
