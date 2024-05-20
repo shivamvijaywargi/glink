@@ -11,6 +11,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /", handlers.GetAllUrls)
+	mux.HandleFunc("GET /{shortUrl}", handlers.RedirectUsingShortUrl)
 	mux.HandleFunc("POST /", handlers.CreateShortUrl)
 	mux.HandleFunc("PATCH /{id}", handlers.UpdateShortUrl)
 	mux.HandleFunc("DELETE /{id}", handlers.DeleteShortUrl)

@@ -28,6 +28,7 @@ type PostUrlHandlerParams struct {
 	shortUrl    string
 }
 
+// TODO: Can be refactored as a utility function
 func generateRandomShortUrl(length int) (string, error) {
 	charSetLen := big.NewInt(int64(len(shortUrlCharSet)))
 	result := make([]byte, length)
@@ -52,6 +53,21 @@ func GetAllUrls(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.JsonResponse(w, resp, http.StatusOK)
+}
+
+func RedirectUsingShortUrl(w http.ResponseWriter, r *http.Request) {
+	shortUrl := r.PathValue("shortUrl")
+
+	for i := 0; i < len(shortUrls); i++ {
+		if shortUrls[i].ShortUrl == shortUrl {
+			w.WriteHeader(308)
+
+			http.Redirect(w, r, shortUrls[i].OriginalUrl, http.StatusPermanentRedirect)
+			return
+		}
+	}
+
+	httperror.Writef(w, http.StatusNotFound, "Invalid ID or does not exist")
 }
 
 func CreateShortUrl(w http.ResponseWriter, r *http.Request) {
