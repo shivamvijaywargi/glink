@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"strconv"
 
 	"github.com/shivamvijaywargi/glink/internal/httperror"
 	"github.com/shivamvijaywargi/glink/pkg/utils"
@@ -102,15 +103,38 @@ func CreateShortUrl(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateShortUrl(w http.ResponseWriter, r *http.Request) {
-	urlId := r.PathValue("id")
+	urlId, err := strconv.Atoi(r.PathValue("id"))
 
-	resp := utils.Response{
-		Success: true,
-		Message: fmt.Sprint("Updated the Short URL with ID: ", urlId),
-		Data:    urlId,
+	if err != nil || urlId < 1 {
+		httperror.Writef(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
-	utils.JsonResponse(w, resp, http.StatusCreated)
+	body, err := io.ReadAll(r.Body)
+
+	var urlObj UrlObj
+
+	if err = json.Unmarshal(body, &urlObj); err != nil {
+		httperror.Writef(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	for i := 0; i < len(shortUrls); i++ {
+		if shortUrls[i].Id == urlId {
+			shortUrls[i].OriginalUrl = urlObj.OriginalUrl
+
+			resp := utils.Response{
+				Success: true,
+				Message: fmt.Sprint("Updated the Short URL with ID: ", urlId),
+				Data:    shortUrls[i],
+			}
+
+			utils.JsonResponse(w, resp, http.StatusCreated)
+			return
+		}
+	}
+
+	httperror.Writef(w, http.StatusNotFound, "ID is invalid or does not exist.")
 }
 
 func DeleteShortUrl(w http.ResponseWriter, r *http.Request) {
