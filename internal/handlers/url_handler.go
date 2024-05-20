@@ -1,8 +1,15 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/json"
 	"fmt"
+	"io"
+	"math/big"
 	"net/http"
+
+	"github.com/shivamvijaywargi/glink/internal/httperror"
+	"github.com/shivamvijaywargi/glink/pkg/utils"
 )
 
 type UrlObj struct {
@@ -20,17 +27,90 @@ type PostUrlHandlerParams struct {
 	shortUrl    string
 }
 
+func generateRandomShortUrl(length int) (string, error) {
+	charSetLen := big.NewInt(int64(len(shortUrlCharSet)))
+	result := make([]byte, length)
+
+	for i := range result {
+		randomNum, err := rand.Int(rand.Reader, charSetLen)
+		if err != nil {
+			return "", err
+		}
+
+		result[i] = shortUrlCharSet[randomNum.Int64()]
+	}
+
+	return string(result), nil
+}
+
+func GetAllUrls(w http.ResponseWriter, r *http.Request) {
+	resp := utils.Response{
+		Success: true,
+		Message: "Fetched all the shortened URLs successfully",
+		Data:    shortUrls,
+	}
+
+	utils.JsonResponse(w, resp, http.StatusOK)
+}
+
 func CreateShortUrl(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusCreated)
-	fmt.Print(r)
+	body, err := io.ReadAll(r.Body)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	fmt.Printf("%+v", shortUrls)
+
+	var urlObj UrlObj
+
+	if err = json.Unmarshal(body, &urlObj); err != nil {
+		httperror.Writef(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if urlObj.ShortUrl != "" {
+		for i := 0; i < len(shortUrls); i++ {
+			if shortUrls[i].ShortUrl == urlObj.ShortUrl {
+				httperror.Writef(w, http.StatusConflict, "Short URL that you provided is already taken, please try a different one.")
+				return
+			}
+		}
+	} else {
+		// TODO: After generating a random URL need to verify if it is not duplicate as well
+		urlObj.ShortUrl, err = generateRandomShortUrl(8)
+
+		if err != nil {
+			httperror.Writef(w, http.StatusInternalServerError, "Something went wrong, please try again later.")
+			return
+		}
+	}
+
+	urlObj.Id = len(shortUrls) + 1
+
+	shortUrls = append(shortUrls, urlObj)
+
+	resp := utils.Response{
+		Success: true,
+		Message: "Short URL created successfully",
+		Data:    urlObj,
+	}
+
+	fmt.Printf("%+v \n", shortUrls)
+
+	utils.JsonResponse(w, resp, 201)
 }
 
 func UpdateShortUrl(w http.ResponseWriter, r *http.Request) {
 	urlId := r.PathValue("id")
 
-	msg := fmt.Sprint("Update a specific snippet by ID: ", urlId)
+	resp := utils.Response{
+		Success: true,
+		Message: fmt.Sprint("Updated the Short URL with ID: ", urlId),
+		Data:    urlId,
+	}
 
-	w.Write([]byte(msg))
+	utils.JsonResponse(w, resp, http.StatusCreated)
 }
 
 func DeleteShortUrl(w http.ResponseWriter, r *http.Request) {
