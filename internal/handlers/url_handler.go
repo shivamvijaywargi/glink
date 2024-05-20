@@ -154,5 +154,26 @@ func UpdateShortUrl(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteShortUrl(w http.ResponseWriter, r *http.Request) {
-	fmt.Print(r)
+	urlId, err := strconv.Atoi(r.PathValue("id"))
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	for i, urlObj := range shortUrls {
+		if urlObj.Id == urlId {
+			shortUrls = append(shortUrls[:i], shortUrls[i+1:]...)
+
+			resp := utils.Response{
+				Success: true,
+				Message: "URL mapping deleted successfully",
+			}
+
+			utils.JsonResponse(w, resp, http.StatusOK)
+			return
+		}
+	}
+
+	httperror.Writef(w, http.StatusNotFound, "Invalid ID or does not exist")
 }
