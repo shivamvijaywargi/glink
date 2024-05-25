@@ -23,11 +23,6 @@ var shortUrls []UrlObj
 
 var shortUrlCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-type PostUrlHandlerParams struct {
-	originalUrl string
-	shortUrl    string
-}
-
 // TODO: Can be refactored as a utility function
 func generateRandomShortUrl(length int) (string, error) {
 	charSetLen := big.NewInt(int64(len(shortUrlCharSet)))
@@ -128,6 +123,10 @@ func UpdateShortUrl(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
 	var urlObj UrlObj
 
 	if err = json.Unmarshal(body, &urlObj); err != nil {
@@ -154,7 +153,7 @@ func UpdateShortUrl(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteShortUrl(w http.ResponseWriter, r *http.Request) {
-	urlId, err := strconv.Atoi(r.PathValue("id"))
+	urlId, err := strconv.Atoi(r.PathValue("id")) // Converts string(number) to number since path values are always strings
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -163,7 +162,7 @@ func DeleteShortUrl(w http.ResponseWriter, r *http.Request) {
 
 	for i, urlObj := range shortUrls {
 		if urlObj.Id == urlId {
-			shortUrls = append(shortUrls[:i], shortUrls[i+1:]...)
+			shortUrls = append(shortUrls[:i], shortUrls[i+1:]...) // ... here is almost similar to JS spread operator
 
 			resp := utils.Response{
 				Success: true,
